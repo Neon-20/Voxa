@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Voxa - Voice AI Mock Interview Practice
 
-## Getting Started
+Voxa is a specialized voice AI-powered mock interview platform built with Next.js, Supabase, and Vapi AI. It helps students and professionals master their interview skills through realistic AI-powered voice interview practice sessions.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### 🎯 Core Features
+
+- **Voice Mock Interviews** - Practice real interviews with AI interviewers through natural voice conversations
+- **Resume-Based Questions** - Upload your resume to get personalized interview questions based on your experience
+- **Role-Specific Practice** - Choose from various job roles and get industry-specific interview questions
+- **Real-Time Feedback** - Get instant AI-powered feedback on your responses, tone, and confidence
+- **Performance Analytics** - Track your progress with detailed scoring and improvement recommendations
+- **15-Minute Sessions** - Focused interview practice sessions with maximum 15-minute duration
+
+### 🔧 Technical Features
+
+- **Authentication** - Secure user authentication with Supabase Auth
+- **Database** - PostgreSQL database with Supabase for data persistence
+- **AI Integration** - Claude AI for intelligent interview questions and feedback analysis
+- **Voice Integration** - Vapi SDK for natural voice-based interview interactions
+- **Responsive Design** - Clean, mobile-friendly UI optimized for interview practice
+- **Real-time Updates** - Live session updates and progress tracking
+
+## Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Supabase
+- **Database**: PostgreSQL (Supabase)
+- **Authentication**: Supabase Auth
+- **AI**: Claude AI (Anthropic) API
+- **Voice**: Vapi SDK
+- **UI Components**: Radix UI, Lucide React, React Hot Toast
+- **Styling**: Tailwind CSS with custom components
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account
+- Claude API key (Anthropic)
+- Vapi account (for voice features)
+
+### 1. Environment Variables
+Create a `.env.local` file in the root directory:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Vapi Configuration
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key_here
+VAPI_PRIVATE_KEY=your_vapi_private_key_here
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run the Application
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Visit `http://localhost:3000` to see the application.
 
-## Learn More
+## Database Setup
 
-To learn more about Next.js, take a look at the following resources:
+You'll need to set up the following tables in your Supabase database. The SQL schema is provided in the full documentation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Sign Up/Login** - Create an account or sign in to access the platform
+2. **Upload Resume** - Upload your resume to get personalized interview questions
+3. **Select Role** - Choose the job role you want to practice interviewing for
+4. **Start Mock Interview** - Begin your voice-powered interview practice session
+5. **Practice Speaking** - Answer AI-generated questions using natural voice
+6. **Get Feedback** - Receive detailed analysis and improvement recommendations
+7. **Track Progress** - Monitor your performance over time with analytics
