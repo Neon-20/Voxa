@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Play, Square, Mic, MicOff, MessageSquare, Star, Volume2, Upload, FileText, Briefcase, Clock, User, Bot } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Play, Square, Mic, MicOff, MessageSquare, Star, FileText, Briefcase, User, Bot, Video, VideoOff, Settings, Calendar, Clock } from 'lucide-react'
 import { ResumeUpload } from '@/components/ui/resume-upload'
+import { TranscriptModal } from '@/components/interview/transcript-modal'
+import { FeedbackModal } from '@/components/interview/feedback-modal'
 import { toast } from 'react-hot-toast'
 import {
   startVapiSession,
@@ -11,6 +13,147 @@ import {
   cleanupVapiEventHandlers,
   isVapiActive
 } from '@/lib/vapi'
+
+// Self-contained Video Preview Modal Component
+const VideoPreviewModal = ({ onClose }: { onClose: () => void }) => {
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+  const [isVideoOn, setIsVideoOn] = useState(true)
+  const [isAudioOn, setIsAudioOn] = useState(true)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Initialize camera when modal opens
+  useEffect(() => {
+    const initCamera = async () => {
+      try {
+        console.log('🎥 VideoPreviewModal: Initializing camera...')
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: true
+        })
+
+        console.log('✅ VideoPreviewModal: Camera stream obtained')
+        setLocalStream(stream)
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.play().catch(e => console.error('Play error:', e))
+        }
+      } catch (error) {
+        console.error('❌ VideoPreviewModal: Camera error:', error)
+        toast.error('Unable to access camera. Please check permissions.')
+      }
+    }
+
+    initCamera()
+
+    // Cleanup when modal closes
+    return () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [])
+
+  const toggleVideo = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoOn
+        setIsVideoOn(!isVideoOn)
+      }
+    }
+  }
+
+  const toggleAudio = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0]
+      if (audioTrack) {
+        audioTrack.enabled = !isAudioOn
+        setIsAudioOn(!isAudioOn)
+      }
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Camera & Microphone Test</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Video Preview */}
+          <div className="bg-gray-900 rounded-xl aspect-video relative overflow-hidden">
+            {isVideoOn ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <VideoOff className="h-8 w-8 text-white" />
+                  </div>
+                  <p className="text-white">Camera is off</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={toggleVideo}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                isVideoOn
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}
+            >
+              {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              {isVideoOn ? 'Camera On' : 'Camera Off'}
+            </button>
+
+            <button
+              onClick={toggleAudio}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                isAudioOn
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}
+            >
+              {isAudioOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+              {isAudioOn ? 'Mic On' : 'Mic Off'}
+            </button>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 font-semibold shadow-lg transition-all duration-300"
+            >
+              Looks Good!
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface Question {
   question: string
@@ -24,6 +167,7 @@ interface InterviewSession {
   feedback: string | null
   score: number | null
   duration: number | null
+  status?: string
   created_at: string
 }
 
@@ -153,11 +297,25 @@ CERTIFICATIONS
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [isPartialTranscript, setIsPartialTranscript] = useState(false)
+
+  // Video and audio control state
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true)
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true)
+  const [isVideoPreviewOpen, setIsVideoPreviewOpen] = useState(false)
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const previewVideoRef = useRef<HTMLVideoElement>(null)
 
   // Timer state for 15-minute limit
   const [interviewStartTime, setInterviewStartTime] = useState<Date | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(15 * 60) // 15 minutes in seconds
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null)
+
+  // Modal state for transcript and feedback
+  const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false)
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const [selectedSession, setSelectedSession] = useState<InterviewSession | null>(null)
 
   useEffect(() => {
     fetchInterviewSessions()
@@ -181,6 +339,212 @@ CERTIFICATIONS
       return () => clearInterval(interval)
     }
   }, [isInterviewActive, interviewStartTime])
+
+  // Sync media stream with video element
+  useEffect(() => {
+    if (mediaStream && isVideoEnabled && videoRef.current && currentStage === 'interview') {
+      console.log('🎥 useEffect: Syncing media stream with video element')
+      videoRef.current.srcObject = mediaStream
+
+      // Ensure video plays
+      const handleLoadedMetadata = () => {
+        console.log('🎥 useEffect: Video metadata loaded, starting playback')
+        if (videoRef.current) {
+          videoRef.current.play().catch(e => {
+            console.error('❌ useEffect: Error playing video:', e)
+            // Try again after a short delay
+            setTimeout(() => {
+              if (videoRef.current) {
+                videoRef.current.play().catch(e2 => {
+                  console.error('❌ useEffect: Second attempt to play video failed:', e2)
+                })
+              }
+            }, 500)
+          })
+        }
+      }
+
+      videoRef.current.onloadedmetadata = handleLoadedMetadata
+
+      // If metadata is already loaded, trigger play immediately
+      if (videoRef.current.readyState >= 1) {
+        handleLoadedMetadata()
+      }
+
+    } else if (!isVideoEnabled && videoRef.current) {
+      console.log('🎥 useEffect: Video disabled, clearing video element')
+      videoRef.current.srcObject = null
+    }
+  }, [mediaStream, isVideoEnabled, currentStage])
+
+  // Media stream management
+  const startMediaStream = async () => {
+    try {
+      console.log('🎥 Requesting media stream with:', { video: isVideoEnabled, audio: isAudioEnabled })
+
+      const constraints = {
+        video: isVideoEnabled ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        } : false,
+        audio: isAudioEnabled
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+      console.log('✅ Media stream obtained successfully')
+      console.log('🎥 Video tracks:', stream.getVideoTracks().length)
+      console.log('🎤 Audio tracks:', stream.getAudioTracks().length)
+
+      setMediaStream(stream)
+
+      // The useEffect hook will sync this stream with the video element
+      // This ensures proper timing and avoids race conditions
+
+      return stream
+    } catch (error) {
+      console.error('Error accessing media devices:', error)
+
+      // More specific error messages
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          toast.error('Camera/microphone access denied. Please allow permissions and try again.')
+        } else if (error.name === 'NotFoundError') {
+          toast.error('No camera/microphone found. Please check your devices.')
+        } else if (error.name === 'NotReadableError') {
+          toast.error('Camera/microphone is being used by another application.')
+        } else {
+          toast.error(`Media access error: ${error.message}`)
+        }
+      } else {
+        toast.error('Unable to access camera/microphone. Please check permissions.')
+      }
+      return null
+    }
+  }
+
+  const stopMediaStream = () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop())
+      setMediaStream(null)
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    if (previewVideoRef.current) {
+      previewVideoRef.current.srcObject = null
+    }
+  }
+
+  const toggleVideo = async () => {
+    const newVideoState = !isVideoEnabled
+    setIsVideoEnabled(newVideoState)
+
+    console.log('Toggling video to:', newVideoState)
+
+    if (newVideoState) {
+      // If enabling video, restart the media stream with video
+      try {
+        // Stop current stream if exists
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop())
+        }
+
+        // Start new stream with video enabled
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: isAudioEnabled
+        })
+
+        console.log('New video stream obtained:', newStream)
+        setMediaStream(newStream)
+
+        // Update video elements
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch(e => console.error('Error playing video:', e))
+          }
+        }
+
+        if (previewVideoRef.current) {
+          previewVideoRef.current.srcObject = newStream
+          previewVideoRef.current.onloadedmetadata = () => {
+            previewVideoRef.current?.play().catch(e => console.error('Error playing preview video:', e))
+          }
+        }
+
+      } catch (error) {
+        console.error('Error enabling video:', error)
+        toast.error('Failed to enable camera')
+        setIsVideoEnabled(false)
+      }
+    } else {
+      // If disabling video, stop video tracks but keep audio
+      if (mediaStream) {
+        const videoTracks = mediaStream.getVideoTracks()
+        videoTracks.forEach(track => track.stop())
+
+        // Clear video elements
+        if (videoRef.current) {
+          videoRef.current.srcObject = null
+        }
+        if (previewVideoRef.current) {
+          previewVideoRef.current.srcObject = null
+        }
+
+        // If audio is still enabled, create audio-only stream
+        if (isAudioEnabled) {
+          try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({
+              video: false,
+              audio: true
+            })
+            setMediaStream(audioStream)
+          } catch (error) {
+            console.error('Error maintaining audio stream:', error)
+          }
+        } else {
+          setMediaStream(null)
+        }
+      }
+    }
+  }
+
+  const toggleAudio = () => {
+    const newAudioState = !isAudioEnabled
+    setIsAudioEnabled(newAudioState)
+
+    if (mediaStream) {
+      const audioTrack = mediaStream.getAudioTracks()[0]
+      if (audioTrack) {
+        audioTrack.enabled = newAudioState
+      }
+    }
+  }
+
+  const openVideoPreview = () => {
+    console.log('🎥 Simply opening video preview modal')
+    setIsVideoPreviewOpen(true)
+  }
+
+  const closeVideoPreview = () => {
+    console.log('🎥 Closing video preview')
+    setIsVideoPreviewOpen(false)
+
+    // Stop the preview video element only
+    if (previewVideoRef.current) {
+      previewVideoRef.current.pause()
+      previewVideoRef.current.srcObject = null
+    }
+
+    // Don't stop the main media stream as we might need it for the interview
+  }
 
   // Voice functionality handlers
   const handleCallStart = useCallback(() => {
@@ -215,14 +579,25 @@ CERTIFICATIONS
   const handleError = useCallback(async (error: any) => {
     console.error('Interview Vapi error:', error)
 
-    // Handle specific error types
-    if (error.message && error.message.includes('ejection')) {
-      // Calculate how long the interview ran
-      const duration = interviewStartTime
-        ? Math.floor((Date.now() - interviewStartTime.getTime()) / 1000)
-        : 0
+    // Calculate how long the interview ran
+    const duration = interviewStartTime
+      ? Math.floor((Date.now() - interviewStartTime.getTime()) / 1000)
+      : 0
 
-      if (duration >= 9 * 60) { // If interview ran for 9+ minutes, likely hit API time limit
+    // Save session for any error that occurs during an active interview (if it ran for more than 30 seconds)
+    if (currentStage === 'interview' && duration > 30) {
+      console.log('Saving interview session due to Vapi error. Duration:', duration, 'seconds')
+
+      // Determine if this was likely a timeout/limit error
+      const isTimeoutError = error.message && (
+        error.message.includes('ejection') ||
+        error.message.includes('timeout') ||
+        error.message.includes('limit') ||
+        error.message.includes('duration') ||
+        duration >= 9 * 60 // 9+ minutes suggests timeout
+      )
+
+      if (isTimeoutError || duration >= 9 * 60) {
         toast.success('Interview completed! Your session reached the maximum duration allowed by your plan.')
       } else {
         toast.error('Interview session ended unexpectedly. Saving your progress...')
@@ -238,15 +613,23 @@ CERTIFICATIONS
         }
       }, 1000)
     } else {
+      // For errors that happen before interview starts or very short sessions
       toast.error('Voice interview error. Please try again.')
     }
 
     setIsRecording(false)
-  }, [currentStage, interviewData, voiceTranscript, interviewStartTime])
+  }, [currentStage, interviewStartTime])
 
   const handleTranscript = useCallback((transcript: any) => {
     if (transcript.transcript) {
+      // Update transcript immediately for better responsiveness
+      // Both partial and final transcripts will be shown
       setVoiceTranscript(transcript.transcript)
+      setIsPartialTranscript(transcript.transcriptType === 'partial')
+      console.log('📝 Transcript update:', {
+        type: transcript.transcriptType,
+        text: transcript.transcript.substring(0, 50) + '...'
+      })
     }
   }, [])
 
@@ -260,6 +643,7 @@ CERTIFICATIONS
       if (timerInterval) {
         clearInterval(timerInterval)
       }
+      stopMediaStream()
     }
   }, [])
 
@@ -296,8 +680,36 @@ CERTIFICATIONS
       console.log('Starting voice interview with data:', {
         role: interviewData.role,
         jobDescriptionLength: interviewData.jobDescription.length,
-        resumeLength: interviewData.resume.length
+        resumeLength: interviewData.resume.length,
+        videoEnabled: isVideoEnabled,
+        audioEnabled: isAudioEnabled
       })
+
+      // Initialize media stream with video and audio enabled by default
+      if (isVideoEnabled || isAudioEnabled) {
+        console.log('🎥 Starting media stream for interview with video/audio...')
+        try {
+          await startMediaStream()
+
+          // The useEffect hook will automatically sync the stream with the video element
+          // This ensures proper timing and avoids race conditions
+          console.log('🎥 Media stream initialized, useEffect will handle video element sync')
+
+          // Show success message for video/audio initialization
+          if (isVideoEnabled && isAudioEnabled) {
+            toast.success('🎥 Camera and microphone ready for interview!')
+          } else if (isVideoEnabled) {
+            toast.success('🎥 Camera ready for interview!')
+          } else if (isAudioEnabled) {
+            toast.success('🎤 Microphone ready for interview!')
+          }
+
+        } catch (mediaError) {
+          console.error('❌ Media stream initialization failed:', mediaError)
+          toast.error('Failed to initialize camera/microphone. Please check permissions and try again.')
+          // Continue with interview even if media fails
+        }
+      }
 
       // Generate personalized questions based on JD and resume
       const response = await fetch('/api/interview/personalized-questions', {
@@ -375,7 +787,12 @@ CERTIFICATIONS
     setIsTrialMode(false)
     setCurrentStage('setup')
     setVoiceTranscript('')
+    setIsPartialTranscript(false)
     setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
+    setIsVideoEnabled(true)
+    setIsAudioEnabled(true)
+    setIsVideoPreviewOpen(false)
+    stopMediaStream()
   }
 
   // Save incomplete session when interview ends abruptly
@@ -385,35 +802,64 @@ CERTIFICATIONS
         ? Math.floor((Date.now() - interviewStartTime.getTime()) / 1000)
         : 0
 
+      const sessionData = {
+        role: interviewData.role,
+        jobDescription: interviewData.jobDescription,
+        resume: interviewData.resume,
+        transcript: voiceTranscript || 'Interview session ended unexpectedly',
+        duration,
+        status: 'incomplete'
+      }
+
+      console.log('🔄 Attempting to save incomplete session:', {
+        role: sessionData.role,
+        duration: sessionData.duration,
+        transcriptLength: sessionData.transcript.length,
+        status: sessionData.status
+      })
+
       const response = await fetch('/api/interview/save-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          role: interviewData.role,
-          jobDescription: interviewData.jobDescription,
-          resume: interviewData.resume,
-          transcript: voiceTranscript || 'Interview session ended unexpectedly',
-          duration,
-          status: 'incomplete'
-        }),
+        body: JSON.stringify(sessionData),
+      })
+
+      console.log('📡 Save session API response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
       })
 
       if (response.ok) {
-        console.log('Incomplete session saved successfully')
         const savedSession = await response.json()
-        console.log('Saved session data:', savedSession)
+        console.log('✅ Incomplete session saved successfully:', {
+          id: savedSession.id,
+          role: savedSession.role,
+          status: savedSession.status,
+          created_at: savedSession.created_at
+        })
+
         // Add the saved session to the list immediately
         setInterviewSessions(prev => [savedSession, ...prev])
+
         // Also refresh from server to ensure consistency
         fetchInterviewSessions()
+
+        return savedSession
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('Failed to save incomplete session:', response.status, errorData)
+        console.error('❌ Failed to save incomplete session:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        })
+        return null
       }
     } catch (error) {
-      console.error('Error saving incomplete session:', error)
+      console.error('💥 Exception while saving incomplete session:', error)
+      return null
     }
   }
 
@@ -429,6 +875,9 @@ CERTIFICATIONS
         clearInterval(timerInterval)
         setTimerInterval(null)
       }
+
+      // Stop media stream
+      stopMediaStream()
 
       // Calculate duration
       const duration = interviewStartTime
@@ -490,12 +939,183 @@ CERTIFICATIONS
     }
   }
 
-  // These functions are no longer needed in the new voice interview flow
-  // The interview is now fully voice-based and managed by Vapi
+  // Modal handlers for transcript and feedback
+  const openTranscriptModal = (session: InterviewSession) => {
+    setSelectedSession(session)
+    setIsTranscriptModalOpen(true)
+  }
 
-  // This function is replaced by endInterview() which handles the new voice interview flow
+  const openFeedbackModal = (session: InterviewSession) => {
+    setSelectedSession(session)
+    setIsFeedbackModalOpen(true)
+  }
 
-  const currentQuestion = questions[currentQuestionIndex]
+  const closeTranscriptModal = () => {
+    setIsTranscriptModalOpen(false)
+    setSelectedSession(null)
+  }
+
+  const closeFeedbackModal = () => {
+    setIsFeedbackModalOpen(false)
+    setSelectedSession(null)
+  }
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  // Format time for display
+  const formatTimeOnly = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Add demo interview sessions for testing
+  const addDemoSessions = () => {
+    const demoSessions: InterviewSession[] = [
+      {
+        id: 'demo-1',
+        role: 'Senior Frontend Developer',
+        transcript: `Interviewer: Hello! Welcome to your technical mock interview. I've reviewed your resume and the job description. Let's start with a technical question: Can you walk me through your experience with React and modern JavaScript frameworks?
+
+Candidate: Thank you for having me! I have about 4 years of experience with React. I started with class components and have transitioned to using functional components with hooks. I'm very comfortable with useState, useEffect, useContext, and custom hooks. I've also worked extensively with React Router for navigation and have experience with state management using both Redux and Zustand.
+
+Interviewer: Great! Can you tell me about a challenging project you worked on recently?
+
+Candidate: Sure! I recently led the development of a real-time dashboard for our analytics platform. The main challenge was handling large datasets and ensuring smooth performance. I implemented virtual scrolling for the data tables, used React.memo for component optimization, and implemented debouncing for search functionality. We also used WebSockets for real-time updates.
+
+Interviewer: Excellent! How do you handle state management in large applications?
+
+Candidate: For large applications, I prefer a combination approach. For global state that needs to be shared across many components, I use Redux Toolkit or Zustand. For component-specific state, I stick with useState and useReducer. I also make heavy use of React Context for theme management and user authentication state. The key is to avoid prop drilling while not over-engineering the state management.
+
+Interviewer: Perfect! Last question - how do you ensure code quality and maintainability?
+
+Candidate: I follow several practices: I write comprehensive unit tests using Jest and React Testing Library, use TypeScript for type safety, implement ESLint and Prettier for code consistency, and follow the single responsibility principle. I also believe in code reviews and documentation. For larger features, I create design documents and break work into smaller, reviewable chunks.
+
+Interviewer: Excellent responses! You've demonstrated strong technical knowledge and practical experience. Thank you for your time today.`,
+        feedback: `Overall Performance: Excellent
+
+Strengths:
+• Demonstrated deep technical knowledge of React ecosystem
+• Provided specific, concrete examples from real projects
+• Showed understanding of performance optimization techniques
+• Articulated clear strategies for state management in large applications
+• Emphasized best practices for code quality and maintainability
+
+Technical Highlights:
+• Strong grasp of React hooks and modern patterns
+• Experience with both Redux and Zustand for state management
+• Knowledge of performance optimization (virtual scrolling, React.memo, debouncing)
+• Understanding of real-time technologies (WebSockets)
+• Comprehensive approach to testing and code quality
+
+Areas of Excellence:
+• Clear and structured communication
+• Ability to explain complex technical concepts
+• Practical problem-solving approach
+• Strong focus on best practices and maintainability
+
+Recommendations:
+• Continue building on your strong foundation
+• Consider exploring newer React features like Suspense and Concurrent Mode
+• Your experience and communication skills make you an excellent candidate
+
+Score Breakdown:
+• Technical Knowledge: 9/10
+• Communication: 9/10
+• Problem Solving: 8/10
+• Best Practices: 9/10
+
+This was an outstanding interview performance. You demonstrated both technical expertise and the ability to communicate complex concepts clearly.`,
+        score: 9,
+        duration: 847,
+        status: 'completed',
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
+      },
+      {
+        id: 'demo-2',
+        role: 'Full Stack Developer',
+        transcript: `Interviewer: Great! Can you tell me about your experience with both frontend and backend development?
+
+Candidate: I have about 3 years of full-stack experience. On the frontend, I work primarily with React and Vue.js, and I'm comfortable with TypeScript. For backend development, I use Node.js with Express, and I have experience with both SQL and NoSQL databases - mainly PostgreSQL and MongoDB.
+
+Interviewer: Perfect! How do you handle API design and database optimization?
+
+Candidate: For API design, I follow RESTful principles and use proper HTTP status codes. I also implement proper error handling and validation using libraries like Joi or Yup. For database optimization, I focus on proper indexing, query optimization, and using database-specific features like PostgreSQL's EXPLAIN ANALYZE to identify bottlenecks.
+
+Interviewer: Good! What about deployment and DevOps practices?
+
+Candidate: I have experience with Docker for containerization and have deployed applications using AWS services like EC2, RDS, and S3. I've also worked with CI/CD pipelines using GitHub Actions. I understand the importance of environment variables for configuration and have experience with monitoring tools like CloudWatch.
+
+Interviewer: Excellent! Thank you for sharing your experience.`,
+        feedback: `Good Performance with Room for Growth
+
+Strengths:
+• Solid foundation in both frontend and backend technologies
+• Understanding of RESTful API principles
+• Experience with modern deployment practices
+• Knowledge of database optimization techniques
+
+Technical Knowledge:
+• Good grasp of React and Vue.js frameworks
+• Appropriate use of TypeScript
+• Understanding of Node.js and Express
+• Experience with both SQL and NoSQL databases
+
+Areas for Improvement:
+• Could provide more specific examples from real projects
+• Deeper discussion of system design principles would be beneficial
+• More detail on error handling and edge cases
+• Consider exploring microservices architecture
+
+Recommendations:
+• Practice explaining technical concepts with concrete examples
+• Deepen knowledge of system design patterns
+• Explore advanced database concepts like sharding and replication
+• Consider learning about message queues and caching strategies
+
+Score Breakdown:
+• Technical Knowledge: 7/10
+• Communication: 6/10
+• Problem Solving: 7/10
+• Best Practices: 7/10
+
+Solid interview performance with good technical foundation. Focus on providing more detailed examples and deeper technical discussions.`,
+        score: 7,
+        duration: 623,
+        status: 'completed',
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days ago
+      },
+      {
+        id: 'demo-3',
+        role: 'Backend Engineer',
+        transcript: `Interviewer: Hello! Let's discuss your backend development experience. Can you tell me about your experience with API development?
+
+Candidate: Hi! I have experience building RESTful APIs using Node.js and Python. I've worked with frameworks like Express.js and FastAPI. I focus on proper status codes, error handling, and documentation using tools like Swagger.
+
+Interviewer: Great! How do you handle database design and optimization?
+
+Candidate: I usually start with understanding the data relationships and choose between SQL and NoSQL based on requirements. For SQL databases, I focus on normalization, proper indexing, and query optimization. I've used PostgreSQL and MySQL primarily.
+
+Interviewer: The interview was cut short due to time limits, but thank you for your responses.`,
+        feedback: `Interview session ended unexpectedly. Please try again for a complete session.`,
+        score: null,
+        duration: 342,
+        status: 'incomplete',
+        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
+      }
+    ]
+
+    setInterviewSessions(prev => [...demoSessions, ...prev])
+    toast.success('Demo interview sessions added! You can now test the transcript and feedback features.')
+  }
 
   return (
     <div className="space-y-8">
@@ -660,6 +1280,89 @@ CERTIFICATIONS
               </div>
             </div>
 
+            {/* Video/Audio Setup Section */}
+            <div className="max-w-4xl mx-auto mb-8">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-xl p-6 border border-gray-200/50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                    <Settings className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Audio & Video Setup</h3>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Audio/Video Controls */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isVideoEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+                          {isVideoEnabled ? (
+                            <Video className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <VideoOff className="h-5 w-5 text-gray-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">Camera</div>
+                          <div className="text-sm text-gray-500">
+                            {isVideoEnabled ? 'Enabled' : 'Disabled'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleVideo}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          isVideoEnabled
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {isVideoEnabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAudioEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+                          {isAudioEnabled ? (
+                            <Mic className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <MicOff className="h-5 w-5 text-gray-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">Microphone</div>
+                          <div className="text-sm text-gray-500">
+                            {isAudioEnabled ? 'Enabled' : 'Disabled'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleAudio}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          isAudioEnabled
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {isAudioEnabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Test Setup Button */}
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={openVideoPreview}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                      Test Camera & Microphone
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Compact Start Interview Button */}
             <div className="flex justify-center pt-8">
               <div className="text-center max-w-lg">
@@ -723,6 +1426,9 @@ CERTIFICATIONS
         </div>
       )}
 
+      {/* Simple Video Preview Modal */}
+      {isVideoPreviewOpen && <VideoPreviewModal onClose={closeVideoPreview} />}
+
       {/* Active Interview - Video Call Layout */}
       {currentStage === 'interview' && (
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-100/50 overflow-hidden">
@@ -758,7 +1464,7 @@ CERTIFICATIONS
                   <div className="text-sm text-gray-500 font-medium">Time Remaining</div>
                 </div>
                 <button
-                  onClick={endInterview}
+                  onClick={() => endInterview()}
                   className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 flex items-center gap-3 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   <Square className="h-5 w-5" />
@@ -825,36 +1531,90 @@ CERTIFICATIONS
               {/* User Side */}
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl aspect-video relative overflow-hidden shadow-2xl border border-gray-700/50">
-                  {/* Video Off Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20 shadow-xl">
-                        <User className="h-12 w-12 text-white" />
-                      </div>
-                      <h3 className="text-white font-bold text-xl mb-3">You</h3>
-                      <div className="flex items-center justify-center gap-3 text-white/80 text-base">
-                        <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                        <span className="font-medium">{isRecording ? 'Active' : 'Ready'}</span>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Video Feed or Placeholder */}
+                  {isVideoEnabled && mediaStream ? (
+                    <div className="relative w-full h-full">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                        onLoadedMetadata={() => {
+                          console.log('🎥 Main video metadata loaded')
+                          if (videoRef.current) {
+                            console.log('🎥 Video element details:', {
+                              readyState: videoRef.current.readyState,
+                              videoWidth: videoRef.current.videoWidth,
+                              videoHeight: videoRef.current.videoHeight,
+                              paused: videoRef.current.paused,
+                              srcObject: !!videoRef.current.srcObject
+                            })
+                            videoRef.current.play().catch(e => console.error('❌ Error playing main video:', e))
+                          }
+                        }}
+                        onError={(e) => console.error('❌ Video error:', e)}
+                        onCanPlay={() => console.log('✅ Main video can play')}
+                        onPlay={() => console.log('▶️ Main video started playing')}
+                        onLoadStart={() => console.log('🔄 Main video load started')}
+                        onLoadedData={() => console.log('📊 Main video data loaded')}
+                      />
 
-                  {/* Recording Indicator */}
-                  <div className="absolute top-6 right-6">
-                    <div className={`p-3 rounded-xl shadow-lg ${isRecording ? 'bg-green-500' : 'bg-gray-500'}`}>
-                      <Mic className="h-5 w-5 text-white" />
-                    </div>
-                  </div>
 
-                  {/* Recording Animation */}
-                  {isRecording && (
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                        <span className="text-green-400 text-sm font-medium">Recording</span>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20 shadow-xl">
+                          <User className="h-12 w-12 text-white" />
+                        </div>
+                        <h3 className="text-white font-bold text-xl mb-3">You</h3>
+                        <div className="flex items-center justify-center gap-3 text-white/80 text-base">
+                          <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                          <span className="font-medium">{isRecording ? 'Active' : 'Ready'}</span>
+                        </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Video/Audio Controls - Bottom Center */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <div className="flex items-center gap-3 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
+                      <button
+                        onClick={toggleVideo}
+                        className={`p-3 rounded-full transition-all duration-200 ${
+                          isVideoEnabled
+                            ? 'bg-green-500 hover:bg-green-600'
+                            : 'bg-red-500 hover:bg-red-600'
+                        }`}
+                        title={isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                      >
+                        {isVideoEnabled ? (
+                          <Video className="h-5 w-5 text-white" />
+                        ) : (
+                          <VideoOff className="h-5 w-5 text-white" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={toggleAudio}
+                        className={`p-3 rounded-full transition-all duration-200 ${
+                          isAudioEnabled
+                            ? 'bg-green-500 hover:bg-green-600'
+                            : 'bg-red-500 hover:bg-red-600'
+                        }`}
+                        title={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                      >
+                        {isAudioEnabled ? (
+                          <Mic className="h-5 w-5 text-white" />
+                        ) : (
+                          <MicOff className="h-5 w-5 text-white" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+
                 </div>
 
                 <div className="text-center bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
@@ -881,8 +1641,13 @@ CERTIFICATIONS
 
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 min-h-[120px] max-h-48 overflow-y-auto">
                 {voiceTranscript ? (
-                  <div className="text-gray-800 text-base leading-relaxed">
+                  <div className={`text-base leading-relaxed transition-all duration-200 ${
+                    isPartialTranscript ? 'text-gray-600 italic' : 'text-gray-800'
+                  }`}>
                     {voiceTranscript}
+                    {isPartialTranscript && (
+                      <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-24">
@@ -896,6 +1661,8 @@ CERTIFICATIONS
                 )}
               </div>
             </div>
+
+
 
             {/* Interview Status */}
             <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-6 border border-green-200/50 shadow-lg">
@@ -967,14 +1734,25 @@ CERTIFICATIONS
 
       {/* Interview History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Interview History</h2>
+              <p className="text-sm text-gray-600">Track your progress and review past performances</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Interview History</h2>
-            <p className="text-sm text-gray-600">Track your progress and review past performances</p>
-          </div>
+
+          {/* Demo Button */}
+          <button
+            onClick={addDemoSessions}
+            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-lg hover:from-orange-600 hover:to-yellow-600 font-medium text-sm shadow-lg transition-all duration-200 flex items-center gap-2"
+          >
+            <Star className="h-4 w-4" />
+            Add Demo Data
+          </button>
         </div>
 
         {isLoadingSessions ? (
@@ -996,51 +1774,81 @@ CERTIFICATIONS
           <div className="space-y-4">
             {interviewSessions.map((session) => (
               <div key={session.id} className="group border border-gray-200 rounded-xl p-6 hover:border-purple-300 hover:shadow-sm transition-all duration-200">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-start gap-4">
+                <div className="grid lg:grid-cols-3 gap-6 items-center">
+                  {/* Left Side - Interview Info */}
+                  <div className="lg:col-span-2 flex items-start gap-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <MessageSquare className="h-6 w-6 text-purple-600" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-bold text-gray-900 text-lg">{session.role}</h3>
                         {session.status === 'incomplete' && (
                           <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                             Incomplete
                           </span>
                         )}
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {new Date(session.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                        {session.duration && (
-                          <span className="ml-2">• {Math.floor(session.duration / 60)}m {session.duration % 60}s</span>
+                        {session.score && (
+                          <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            <span className="font-bold text-yellow-700 text-xs">{session.score}/10</span>
+                          </div>
                         )}
-                      </p>
-                    </div>
-                  </div>
-                  {session.score && (
-                    <div className="flex items-center gap-2 bg-yellow-50 px-3 py-2 rounded-lg">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="font-bold text-yellow-700">{session.score}/10</span>
-                    </div>
-                  )}
-                </div>
+                      </div>
 
-                {session.feedback && (
-                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-100">
-                    <h4 className="font-semibold text-gray-900 mb-2 text-sm">AI Feedback</h4>
-                    <p className="text-sm text-gray-700 leading-relaxed">{session.feedback}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{formatDate(session.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{formatTimeOnly(session.created_at)}</span>
+                        </div>
+                        {session.duration && (
+                          <span>• {Math.floor(session.duration / 60)}m {session.duration % 60}s</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
+
+                  {/* Right Side - Action Buttons */}
+                  <div className="flex items-center gap-3 justify-end">
+                    <button
+                      onClick={() => openTranscriptModal(session)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-blue-100 border border-purple-200 transition-all duration-200 font-medium text-sm"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Transcript
+                    </button>
+                    <button
+                      onClick={() => openFeedbackModal(session)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 rounded-lg hover:from-blue-100 hover:to-purple-100 border border-blue-200 transition-all duration-200 font-medium text-sm"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Feedback
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Transcript Modal */}
+      <TranscriptModal
+        isOpen={isTranscriptModalOpen}
+        onClose={closeTranscriptModal}
+        session={selectedSession}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={closeFeedbackModal}
+        session={selectedSession}
+      />
     </div>
   )
 }

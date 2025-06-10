@@ -2,6 +2,7 @@
 
 import { InterviewLayout } from '@/components/layout/interview-layout'
 import { MockInterview } from '@/components/interview/mock-interview'
+import { RouteGuard } from '@/components/auth/route-guard'
 import { Mic, MessageSquare, Target, Sparkles, Brain, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -12,8 +13,9 @@ export default function InterviewPage() {
     setIsVisible(true)
   }, [])
   return (
-    <InterviewLayout>
-      <div className="space-y-12">
+    <RouteGuard requireAuth={true}>
+      <InterviewLayout>
+        <div className="space-y-12">
         {/* Compact Hero Section */}
         <div className={`relative bg-gradient-to-br from-purple-50 via-white to-blue-50 rounded-2xl p-6 lg:p-8 overflow-hidden border border-purple-100/50 shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-blue-500/5" />
@@ -154,8 +156,9 @@ export default function InterviewPage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
-      </div>
-    </InterviewLayout>
+      </InterviewLayout>
+    </RouteGuard>
   )
 }

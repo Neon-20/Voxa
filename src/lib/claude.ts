@@ -149,10 +149,11 @@ export const evaluateInterviewResponse = async (question: string, response: stri
 }
 
 export const evaluateVoiceInterview = async (
-  transcript: string, 
-  role: string, 
-  jobDescription?: string, 
-  resume?: string
+  transcript: string,
+  role: string,
+  jobDescription?: string,
+  resume?: string,
+  candidateName?: string
 ) => {
   try {
     const claudeResponse = await anthropic.messages.create({
@@ -170,6 +171,12 @@ export const evaluateVoiceInterview = async (
 5. Assessment of how well the candidate answered questions
 6. Evaluation of their enthusiasm and engagement
 
+IMPORTANT GUIDELINES:
+- Use the candidate's actual name: ${candidateName || 'The candidate'}
+- Use gender-neutral pronouns (they/them) throughout the feedback
+- Be specific and professional in your evaluation
+- Focus on technical competency and interview performance
+
 Consider factors like:
 - Clarity and structure of responses
 - Depth of technical knowledge
@@ -180,7 +187,7 @@ Consider factors like:
 
 Format as JSON: {
   "score": number (1-10),
-  "feedback": "detailed overall feedback",
+  "feedback": "detailed overall feedback using candidate's name and they/them pronouns",
   "strengths": ["list of strengths"],
   "improvements": ["list of improvement areas"],
   "recommendation": "brief recommendation"
@@ -189,11 +196,12 @@ Format as JSON: {
 Role: ${role}
 ${jobDescription ? `\nJob Description: ${jobDescription}` : ''}
 ${resume ? `\nCandidate Resume: ${resume}` : ''}
+${candidateName ? `\nCandidate Name: ${candidateName}` : ''}
 
 Interview Transcript:
 ${transcript}
 
-Please evaluate this interview performance comprehensively.
+Please evaluate this interview performance comprehensively using the candidate's name and gender-neutral language.
 
 IMPORTANT: Return ONLY valid JSON, no additional text or formatting.`
         }

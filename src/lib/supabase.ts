@@ -1,20 +1,41 @@
 import { createClient } from '@supabase/supabase-js'
-import { createClientComponentClient, createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Client-side Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Singleton client to prevent multiple instances
+let clientInstance: ReturnType<typeof createClient> | null = null
 
-// Client component client
-export const createSupabaseClient = () => createClientComponentClient()
+// Client component client (singleton pattern)
+export const createSupabaseClient = () => {
+  if (typeof window !== 'undefined') {
+    if (!clientInstance) {
+      clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      })
+    }
+    return clientInstance
+  }
 
-// Server component client - will be used in API routes and server components
-export const createSupabaseServerClient = async () => {
-  const { cookies } = await import('next/headers')
-  return createServerComponentClient({ cookies })
+  // For SSR, create new instance each time
+  return createClient(supabaseUrl, supabaseAnonKey)
 }
+
+// Server component client - for API routes and server components
+export const createSupabaseServerClient = async () => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false
+    }
+  })
+}
+
+// Legacy export for backward compatibility
+export const supabase = createSupabaseClient()
 
 // Database types
 export interface Database {

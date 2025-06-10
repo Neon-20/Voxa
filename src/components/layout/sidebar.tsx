@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/providers'
+import { toast } from 'react-hot-toast'
 import {
   FileText,
   MessageSquare,
@@ -24,10 +25,21 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
 
   const toggleSidebar = () => setIsOpen(!isOpen)
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      toast.success('Signed out successfully')
+      router.push('/')
+    } catch (error) {
+      toast.error('Failed to sign out')
+    }
+  }
 
   return (
     <>
@@ -128,22 +140,22 @@ export function Sidebar() {
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
                 <User className="h-4 w-4 text-white" />
               </div>
             </div>
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user.email}
+                {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
               </p>
-              <p className="text-xs text-gray-500">Voice Member</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
             <button
-              onClick={signOut}
-              className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={handleSignOut}
+              className="ml-3 flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded hover:bg-red-50"
               title="Sign out"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>

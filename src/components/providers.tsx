@@ -32,9 +32,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+        }
+        console.log('Initial session check:', session ? 'authenticated' : 'not authenticated', {
+          user: session?.user?.email || 'none',
+          expires: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
+        })
+        setUser(session?.user ?? null)
+        setLoading(false)
+      } catch (error) {
+        console.error('Session check failed:', error)
+        setLoading(false)
+      }
     }
 
     getSession()
@@ -42,8 +54,29 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session ? 'authenticated' : 'not authenticated', {
+          user: session?.user?.email || 'none',
+          timestamp: new Date().toISOString()
+        })
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // Handle automatic redirects after authentication
+        if (event === 'SIGNED_IN' && session) {
+          console.log('Sign in detected, handling redirect')
+
+          // Check if we're on the auth page (but not callback)
+          if (window.location.pathname.startsWith('/auth') && window.location.pathname !== '/auth/callback') {
+            // Get redirect destination from URL params
+            const urlParams = new URLSearchParams(window.location.search)
+            const redirectTo = urlParams.get('redirectTo')
+            const destination = redirectTo && redirectTo !== '/auth' ? redirectTo : '/interview'
+
+            console.log('Redirecting authenticated user to:', destination)
+            // Use replace instead of href to avoid history entry
+            window.location.replace(destination)
+          }
+        }
       }
     )
 
@@ -51,7 +84,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [supabase.auth])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+      // Clear user state immediately
+      setUser(null)
+    } catch (error) {
+      console.error('Sign out error:', error)
+      throw error
+    }
   }
 
   const value = {

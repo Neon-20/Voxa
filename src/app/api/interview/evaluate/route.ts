@@ -30,7 +30,13 @@ export async function POST(request: NextRequest) {
 
     if (transcript && transcript.trim()) {
       // Use AI to evaluate the entire interview conversation
-      const evaluationResult = await evaluateVoiceInterview(transcript, role, jobDescription, resume)
+      // Get candidate name from user metadata or email
+      const candidateName = user.user_metadata?.full_name ||
+                           user.user_metadata?.name ||
+                           user.email?.split('@')[0] ||
+                           'The candidate'
+
+      const evaluationResult = await evaluateVoiceInterview(transcript, role, jobDescription, resume, candidateName)
       if (evaluationResult) {
         try {
           const evaluation = JSON.parse(evaluationResult)

@@ -15,7 +15,7 @@ Voxa is a specialized voice AI-powered mock interview platform built with Next.j
 
 ### 🔧 Technical Features
 
-- **Authentication** - Secure user authentication with Supabase Auth
+- **Authentication** - Secure user authentication with Supabase Auth (Email/Password + OAuth)
 - **Database** - PostgreSQL database with Supabase for data persistence
 - **AI Integration** - Claude AI for intelligent interview questions and feedback analysis
 - **Voice Integration** - Vapi SDK for natural voice-based interview interactions
@@ -27,7 +27,7 @@ Voxa is a specialized voice AI-powered mock interview platform built with Next.j
 - **Frontend**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes, Supabase
 - **Database**: PostgreSQL (Supabase)
-- **Authentication**: Supabase Auth
+- **Authentication**: Supabase Auth with OAuth (Google, GitHub)
 - **AI**: Claude AI (Anthropic) API
 - **Voice**: Vapi SDK
 - **UI Components**: Radix UI, Lucide React, React Hot Toast
@@ -77,9 +77,13 @@ Visit `http://localhost:3000` to see the application.
 
 You'll need to set up the following tables in your Supabase database. The SQL schema is provided in the full documentation.
 
+## OAuth Setup
+
+For social authentication (Google and GitHub), you'll need to configure OAuth providers in your Supabase dashboard. See `OAUTH_SETUP.md` for detailed instructions on setting up Google and GitHub OAuth integration.
+
 ## Usage
 
-1. **Sign Up/Login** - Create an account or sign in to access the platform
+1. **Sign Up/Login** - Create an account or sign in using email/password or social OAuth (Google, GitHub)
 2. **Upload Resume** - Upload your resume to get personalized interview questions
 3. **Select Role** - Choose the job role you want to practice interviewing for
 4. **Start Mock Interview** - Begin your voice-powered interview practice session
