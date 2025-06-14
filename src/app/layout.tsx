@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import { Providers } from '@/components/providers';
 import { OAuthLoading } from '@/components/auth/oauth-loading';
+import { Suspense } from 'react';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           {children}
-          <OAuthLoading />
+          <Suspense fallback={null}>
+            <OAuthLoading />
+          </Suspense>
           <Toaster position="top-right" />
         </Providers>
       </body>

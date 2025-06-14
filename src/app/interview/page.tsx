@@ -4,7 +4,7 @@ import { InterviewLayout } from '@/components/layout/interview-layout'
 import { MockInterview } from '@/components/interview/mock-interview'
 import { RouteGuard } from '@/components/auth/route-guard'
 import { Mic, Target, Brain, Clock } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
 export default function InterviewPage() {
   const [isVisible, setIsVisible] = useState(false)
@@ -13,8 +13,19 @@ export default function InterviewPage() {
     setIsVisible(true)
   }, [])
   return (
-    <RouteGuard requireAuth={true}>
-      <InterviewLayout>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Mic className="h-8 w-8 text-white animate-pulse" />
+          </div>
+          <div className="text-lg font-semibold text-gray-900 mb-2">Loading Voxa</div>
+          <div className="w-8 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto animate-pulse"></div>
+        </div>
+      </div>
+    }>
+      <RouteGuard requireAuth={true}>
+        <InterviewLayout>
         <div className="space-y-12">
         {/* Compact Hero Section */}
         <div className={`relative bg-gradient-to-br from-purple-50 via-white to-blue-50 rounded-2xl p-6 lg:p-8 overflow-hidden border border-purple-100/50 shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -117,5 +128,6 @@ export default function InterviewPage() {
         </div>
       </InterviewLayout>
     </RouteGuard>
+    </Suspense>
   )
 }
