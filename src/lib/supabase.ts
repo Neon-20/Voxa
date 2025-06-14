@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { NextRequest } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -25,10 +27,32 @@ export const createSupabaseClient = () => {
   return createClient(supabaseUrl, supabaseAnonKey)
 }
 
-// Server component client - for API routes and server components
-export const createSupabaseServerClient = async () => {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+// Server client for API routes - requires request object
+export const createSupabaseServerClient = (request: NextRequest) => {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(_cookiesToSet) {
+        // For API routes, we can't set cookies directly in the request
+        // The middleware should handle cookie setting
+        // This is a no-op for API routes
+      },
+    },
+  })
+}
+
+// Service client for admin operations (bypasses RLS)
+export const createSupabaseServiceClient = () => {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+  }
+
+  return createClient(supabaseUrl, serviceKey, {
     auth: {
+      autoRefreshToken: false,
       persistSession: false
     }
   })

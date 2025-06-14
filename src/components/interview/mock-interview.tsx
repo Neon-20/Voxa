@@ -312,6 +312,9 @@ CERTIFICATIONS
   const [timeRemaining, setTimeRemaining] = useState(15 * 60) // 15 minutes in seconds
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null)
 
+  // Store interview data when interview starts to preserve it
+  const [activeInterviewData, setActiveInterviewData] = useState<InterviewData | null>(null)
+
   // Modal state for transcript and feedback
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false)
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
@@ -685,6 +688,13 @@ CERTIFICATIONS
         audioEnabled: isAudioEnabled
       })
 
+      // Store the interview data to preserve it during the interview
+      setActiveInterviewData({
+        role: interviewData.role,
+        jobDescription: interviewData.jobDescription,
+        resume: interviewData.resume
+      })
+
       // Initialize media stream with video and audio enabled by default
       if (isVideoEnabled || isAudioEnabled) {
         console.log('🎥 Starting media stream for interview with video/audio...')
@@ -758,6 +768,12 @@ CERTIFICATIONS
       setCurrentResponse('')
       setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
 
+      console.log('🔧 Interview started successfully with data:', {
+        role: interviewData.role,
+        jobDescriptionLength: interviewData.jobDescription.length,
+        resumeLength: interviewData.resume.length
+      })
+
     } catch (error) {
       console.error('Interview start error:', error)
 
@@ -802,10 +818,15 @@ CERTIFICATIONS
         ? Math.floor((Date.now() - interviewStartTime.getTime()) / 1000)
         : 0
 
+      // Use stored interview data if current data is empty
+      const dataToUse = (interviewData.role && interviewData.jobDescription && interviewData.resume)
+        ? interviewData
+        : activeInterviewData || interviewData
+
       const sessionData = {
-        role: interviewData.role,
-        jobDescription: interviewData.jobDescription,
-        resume: interviewData.resume,
+        role: dataToUse.role,
+        jobDescription: dataToUse.jobDescription,
+        resume: dataToUse.resume,
         transcript: voiceTranscript || 'Interview session ended unexpectedly',
         duration,
         status: 'incomplete'
@@ -866,6 +887,31 @@ CERTIFICATIONS
   // End the interview
   const endInterview = async (isAbruptEnd = false) => {
     try {
+      // Use stored interview data if current data is empty
+      const dataToUse = (interviewData.role && interviewData.jobDescription && interviewData.resume)
+        ? interviewData
+        : activeInterviewData || interviewData
+
+      console.log('🔧 endInterview called with data:', {
+        isAbruptEnd,
+        currentInterviewData: {
+          role: interviewData.role,
+          jobDescriptionLength: interviewData.jobDescription?.length || 0,
+          resumeLength: interviewData.resume?.length || 0
+        },
+        activeInterviewData: activeInterviewData ? {
+          role: activeInterviewData.role,
+          jobDescriptionLength: activeInterviewData.jobDescription?.length || 0,
+          resumeLength: activeInterviewData.resume?.length || 0
+        } : null,
+        dataToUse: {
+          role: dataToUse.role,
+          jobDescriptionLength: dataToUse.jobDescription?.length || 0,
+          resumeLength: dataToUse.resume?.length || 0
+        },
+        voiceTranscriptLength: voiceTranscript?.length || 0
+      })
+
       if (isVapiActive()) {
         await stopVapiSession()
       }
@@ -896,9 +942,9 @@ CERTIFICATIONS
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            role: interviewData.role,
-            jobDescription: interviewData.jobDescription,
-            resume: interviewData.resume,
+            role: dataToUse.role,
+            jobDescription: dataToUse.jobDescription,
+            resume: dataToUse.resume,
             transcript: voiceTranscript,
             duration
           }),
@@ -916,9 +962,9 @@ CERTIFICATIONS
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              role: interviewData.role,
-              jobDescription: interviewData.jobDescription,
-              resume: interviewData.resume,
+              role: dataToUse.role,
+              jobDescription: dataToUse.jobDescription,
+              resume: dataToUse.resume,
               transcript: voiceTranscript || 'Interview completed but evaluation failed',
               duration,
               status: 'completed'
@@ -1524,7 +1570,7 @@ Interviewer: The interview was cut short due to time limits, but thank you for y
 
                 <div className="text-center bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
                   <h4 className="font-bold text-gray-900 text-lg">Voxa AI Interviewer</h4>
-                  <p className="text-purple-600 font-medium">Powered by Vapi & Claude AI</p>
+                  <p className="text-purple-600 font-medium">Powered by Vapi & AI</p>
                 </div>
               </div>
 

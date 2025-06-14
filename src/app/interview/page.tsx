@@ -3,7 +3,7 @@
 import { InterviewLayout } from '@/components/layout/interview-layout'
 import { MockInterview } from '@/components/interview/mock-interview'
 import { RouteGuard } from '@/components/auth/route-guard'
-import { Mic, MessageSquare, Target, Sparkles, Brain, Clock } from 'lucide-react'
+import { Mic, Target, Brain, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export default function InterviewPage() {
@@ -97,7 +97,7 @@ export default function InterviewPage() {
                   <Brain className="h-4 w-4 text-white" />
                 </div>
                 <h3 className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-600 transition-colors duration-300">AI-Powered Analysis</h3>
-                <p className="text-gray-600 text-xs leading-relaxed">Detailed analysis powered by Claude AI</p>
+                <p className="text-gray-600 text-xs leading-relaxed">Detailed analysis powered by AI</p>
               </div>
 
               <div className={`bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/50 shadow-sm hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 group cursor-pointer ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '1500ms' }}>
@@ -114,49 +114,6 @@ export default function InterviewPage() {
         <div className={`transition-all duration-1000 delay-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <MockInterview />
         </div>
-
-        {/* Professional Testimonial */}
-        <div className={`bg-gradient-to-r from-blue-50 via-white to-purple-50 rounded-3xl p-8 lg:p-12 border border-blue-100/50 shadow-xl hover:shadow-2xl transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '1200ms' }}>
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="flex -space-x-2">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg hover:scale-110 transition-transform duration-300 cursor-pointer">
-                  S
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg hover:scale-110 transition-transform duration-300 cursor-pointer" style={{ transitionDelay: '100ms' }}>
-                  M
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg hover:scale-110 transition-transform duration-300 cursor-pointer" style={{ transitionDelay: '200ms' }}>
-                  A
-                </div>
-              </div>
-            </div>
-
-            <blockquote className="text-sm lg:text-base font-medium text-gray-900 mb-6 leading-relaxed hover:text-gray-700 transition-colors duration-300">
-              "Voxa's mock interviews helped me land my dream job at Google. The AI feedback was incredibly detailed and helped me improve my communication skills significantly."
-            </blockquote>
-
-            <div className="text-gray-600 font-medium hover:text-gray-800 transition-colors duration-300">
-              <div className="text-lg">Sarah Chen</div>
-              <div className="text-sm">Software Engineer at Google</div>
-            </div>
-
-            <div className="flex justify-center items-center gap-8 mt-8 text-sm text-gray-500">
-              <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <span>4.9/5 average rating</span>
-              </div>
-              <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                <span>95% success rate</span>
-              </div>
-              <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <span>10,000+ interviews</span>
-              </div>
-            </div>
-          </div>
-          </div>
         </div>
       </InterviewLayout>
     </RouteGuard>

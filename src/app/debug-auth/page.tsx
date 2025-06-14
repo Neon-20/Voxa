@@ -27,10 +27,20 @@ export default function DebugAuthPage() {
   const handleClearStorage = () => {
     localStorage.clear()
     sessionStorage.clear()
+
+    // Clear all cookies, including Supabase cookies
     document.cookie.split(";").forEach((c) => {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+      const eqPos = c.indexOf("=")
+      const name = eqPos > -1 ? c.substr(0, eqPos) : c
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=localhost"
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=127.0.0.1"
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/"
     })
-    window.location.reload()
+
+    // Also clear Supabase session
+    supabase.auth.signOut().then(() => {
+      window.location.href = '/auth'
+    })
   }
 
   return (

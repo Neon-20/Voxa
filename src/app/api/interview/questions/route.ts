@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateInterviewQuestions } from '@/lib/claude'
+import { generateInterviewQuestions } from '@/lib/anthropic'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user from Supabase
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient(request)
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to generate questions')
     }
 
-    // Parse the JSON response from Claude
+    // Parse the JSON response from Anthropic
     const questions = JSON.parse(questionsResult)
 
     return NextResponse.json({ questions })

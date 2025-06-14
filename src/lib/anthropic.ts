@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-// Configure Claude client
+// Configure Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
@@ -10,18 +10,18 @@ export { anthropic }
 // Helper functions for different AI tasks
 export const generateInterviewQuestions = async (role: string) => {
   try {
-    console.log('Calling Claude API for interview questions...')
-    
+    console.log('Calling Anthropic API for interview questions...')
+
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2000,
       messages: [
         {
           role: 'user',
-          content: `You are an expert interviewer. Generate 5-7 relevant interview questions for the role: ${role}. 
+          content: `You are an expert interviewer. Generate 5-7 relevant interview questions for the role: ${role}.
           Include a mix of technical, behavioral, and situational questions appropriate for the role level.
           Format as a JSON array of question objects with "question" and "type" fields.
-          
+
           IMPORTANT: Return ONLY valid JSON, no additional text or formatting.`
         }
       ],
@@ -29,34 +29,34 @@ export const generateInterviewQuestions = async (role: string) => {
     })
 
     const result = response.content[0].type === 'text' ? response.content[0].text : ''
-    console.log('Claude API call successful, response length:', result?.length)
-    
+    console.log('Anthropic API call successful, response length:', result?.length)
+
     return result
   } catch (error) {
-    console.error('Claude API error:', error)
-    
+    console.error('Anthropic API error:', error)
+
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
-        throw new Error('Invalid Claude API key')
+        throw new Error('Invalid Anthropic API key')
       } else if (error.message.includes('quota')) {
-        throw new Error('Claude API quota exceeded')
+        throw new Error('Anthropic API quota exceeded')
       } else if (error.message.includes('rate limit')) {
-        throw new Error('Claude API rate limit exceeded')
+        throw new Error('Anthropic API rate limit exceeded')
       }
     }
-    
-    throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+    throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
 export const generatePersonalizedInterviewQuestions = async (
-  jobDescription: string, 
-  resume: string, 
+  jobDescription: string,
+  resume: string,
   role: string
 ) => {
   try {
-    console.log('Calling Claude API for personalized questions...')
-    
+    console.log('Calling Anthropic API for personalized questions...')
+
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 3000,
@@ -96,29 +96,29 @@ Generate personalized interview questions based on this specific job and candida
     })
 
     const result = response.content[0].type === 'text' ? response.content[0].text : ''
-    console.log('Claude API call successful, response length:', result?.length)
-    
+    console.log('Anthropic API call successful, response length:', result?.length)
+
     return result
   } catch (error) {
-    console.error('Claude API error:', error)
-    
+    console.error('Anthropic API error:', error)
+
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
-        throw new Error('Invalid Claude API key')
+        throw new Error('Invalid Anthropic API key')
       } else if (error.message.includes('quota')) {
-        throw new Error('Claude API quota exceeded')
+        throw new Error('Anthropic API quota exceeded')
       } else if (error.message.includes('rate limit')) {
-        throw new Error('Claude API rate limit exceeded')
+        throw new Error('Anthropic API rate limit exceeded')
       }
     }
-    
-    throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+    throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
 export const evaluateInterviewResponse = async (question: string, response: string, role: string) => {
   try {
-    const claudeResponse = await anthropic.messages.create({
+    const anthropicResponse = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1500,
       messages: [
@@ -128,23 +128,23 @@ export const evaluateInterviewResponse = async (question: string, response: stri
           1. A score from 1-10
           2. Specific feedback on the response
           3. Suggestions for improvement
-          
+
           Format as JSON: {"score": number, "feedback": "string", "suggestions": ["array of suggestions"]}
-          
+
           Role: ${role}
           Question: ${question}
           Candidate Response: ${response}
-          
+
           IMPORTANT: Return ONLY valid JSON, no additional text or formatting.`
         }
       ],
       temperature: 0.7,
     })
 
-    return claudeResponse.content[0].type === 'text' ? claudeResponse.content[0].text : ''
+    return anthropicResponse.content[0].type === 'text' ? anthropicResponse.content[0].text : ''
   } catch (error) {
-    console.error('Claude API error:', error)
-    throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Anthropic API error:', error)
+    throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
@@ -156,7 +156,7 @@ export const evaluateVoiceInterview = async (
   candidateName?: string
 ) => {
   try {
-    const claudeResponse = await anthropic.messages.create({
+    const anthropicResponse = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2500,
       messages: [
@@ -209,9 +209,9 @@ IMPORTANT: Return ONLY valid JSON, no additional text or formatting.`
       temperature: 0.7,
     })
 
-    return claudeResponse.content[0].type === 'text' ? claudeResponse.content[0].text : ''
+    return anthropicResponse.content[0].type === 'text' ? anthropicResponse.content[0].text : ''
   } catch (error) {
-    console.error('Claude API error:', error)
-    throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Anthropic API error:', error)
+    throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

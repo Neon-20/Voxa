@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generatePersonalizedInterviewQuestions } from '@/lib/claude'
+import { generatePersonalizedInterviewQuestions } from '@/lib/anthropic'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if Claude API is configured
+    // Check if Anthropic API is configured
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY.includes('placeholder')) {
-      console.error('Claude API key is not properly configured')
+      console.error('Anthropic API key is not properly configured')
       return NextResponse.json(
-        { error: 'Claude API key is not configured. Please check your environment variables.' },
+        { error: 'Anthropic API key is not configured. Please check your environment variables.' },
         { status: 500 }
       )
     }
@@ -46,19 +46,19 @@ export async function POST(request: NextRequest) {
     )
 
     if (!questionsResult) {
-      throw new Error('Claude returned empty response')
+      throw new Error('Anthropic returned empty response')
     }
 
-    console.log('Raw Claude response:', questionsResult)
+    console.log('Raw Anthropic response:', questionsResult)
 
-    // Parse the JSON response from Claude
+    // Parse the JSON response from Anthropic
     let questions
     try {
       questions = JSON.parse(questionsResult)
     } catch (parseError) {
-      console.error('Failed to parse Claude response as JSON:', parseError)
+      console.error('Failed to parse Anthropic response as JSON:', parseError)
       console.error('Raw response:', questionsResult)
-      throw new Error('Invalid JSON response from Claude')
+      throw new Error('Invalid JSON response from Anthropic')
     }
 
     console.log('Parsed questions:', questions)
@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
     let errorMessage = 'Failed to generate personalized interview questions'
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
-        errorMessage = 'Claude API key is invalid or missing'
+        errorMessage = 'Anthropic API key is invalid or missing'
       } else if (error.message.includes('quota')) {
-        errorMessage = 'Claude API quota exceeded'
+        errorMessage = 'Anthropic API quota exceeded'
       } else if (error.message.includes('JSON')) {
         errorMessage = 'Failed to parse AI response'
       } else {

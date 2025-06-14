@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -134,7 +135,7 @@ export function AuthForm() {
         <div>
           {/* Voxa Logo */}
           <div className="flex justify-center mb-6">
-            <div className="group flex items-center space-x-3 transition-all duration-300">
+            <Link href="/" className="group flex items-center space-x-3 transition-all duration-300 cursor-pointer">
               <div className="relative">
                 {/* Modern Geometric Logo */}
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 rounded-2xl shadow-lg group-hover:shadow-2xl transition-all duration-500 flex items-center justify-center relative overflow-hidden">
@@ -153,13 +154,6 @@ export function AuthForm() {
                   {/* Subtle glow effect */}
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/20 to-indigo-600/20 group-hover:from-purple-300/30 group-hover:to-indigo-500/30 transition-all duration-500"></div>
                 </div>
-
-                {/* AI Status Indicator */}
-                <div className="absolute -top-1 -right-1 flex items-center justify-center">
-                  <div className="w-4 h-4 bg-emerald-400 rounded-full border-2 border-white shadow-sm animate-pulse flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                  </div>
-                </div>
               </div>
 
               <div className="flex flex-col">
@@ -172,7 +166,7 @@ export function AuthForm() {
                   Mock Interview AI
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
 
           <h2 className="text-center text-2xl font-bold text-gray-900">
@@ -254,7 +248,7 @@ export function AuthForm() {
                 />
               </div>
             )}
-            
+
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -271,7 +265,7 @@ export function AuthForm() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="sr-only">
                 Password

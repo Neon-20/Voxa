@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     try {
-      const supabase = await createSupabaseServerClient()
+      const supabase = createSupabaseServerClient(request)
 
       console.log('Attempting to exchange code for session...')
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)

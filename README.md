@@ -17,7 +17,7 @@ Voxa is a specialized voice AI-powered mock interview platform built with Next.j
 
 - **Authentication** - Secure user authentication with Supabase Auth (Email/Password + OAuth)
 - **Database** - PostgreSQL database with Supabase for data persistence
-- **AI Integration** - Claude AI for intelligent interview questions and feedback analysis
+- **AI Integration** - AI for intelligent interview questions and feedback analysis
 - **Voice Integration** - Vapi SDK for natural voice-based interview interactions
 - **Responsive Design** - Clean, mobile-friendly UI optimized for interview practice
 - **Real-time Updates** - Live session updates and progress tracking
@@ -28,7 +28,7 @@ Voxa is a specialized voice AI-powered mock interview platform built with Next.j
 - **Backend**: Next.js API Routes, Supabase
 - **Database**: PostgreSQL (Supabase)
 - **Authentication**: Supabase Auth with OAuth (Google, GitHub)
-- **AI**: Claude AI (Anthropic) API
+- **AI**: Anthropic API
 - **Voice**: Vapi SDK
 - **UI Components**: Radix UI, Lucide React, React Hot Toast
 - **Styling**: Tailwind CSS with custom components
@@ -38,7 +38,7 @@ Voxa is a specialized voice AI-powered mock interview platform built with Next.j
 ### Prerequisites
 - Node.js 18+ and npm
 - Supabase account
-- Claude API key (Anthropic)
+- Anthropic API key
 - Vapi account (for voice features)
 
 ### 1. Environment Variables
