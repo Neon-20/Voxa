@@ -298,6 +298,8 @@ CERTIFICATIONS
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [isPartialTranscript, setIsPartialTranscript] = useState(false)
+  const [fullConversationTranscript, setFullConversationTranscript] = useState('')
+  const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'ai' | null>(null)
 
   // Video and audio control state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true)
@@ -625,12 +627,29 @@ CERTIFICATIONS
 
   const handleTranscript = useCallback((transcript: any) => {
     if (transcript.transcript) {
-      // Update transcript immediately for better responsiveness
-      // Both partial and final transcripts will be shown
+      // Update current transcript for real-time display
       setVoiceTranscript(transcript.transcript)
       setIsPartialTranscript(transcript.transcriptType === 'partial')
+
+      // Only add to full conversation transcript when it's final
+      if (transcript.transcriptType === 'final') {
+        const speaker = transcript.role === 'assistant' ? 'AI Interviewer' : 'Candidate'
+        const timestamp = new Date().toLocaleTimeString()
+
+        setFullConversationTranscript(prev => {
+          const newEntry = `[${timestamp}] ${speaker}: ${transcript.transcript}\n\n`
+          return prev + newEntry
+        })
+
+        console.log('📝 Final transcript added:', {
+          speaker,
+          text: transcript.transcript.substring(0, 50) + '...'
+        })
+      }
+
       console.log('📝 Transcript update:', {
         type: transcript.transcriptType,
+        role: transcript.role,
         text: transcript.transcript.substring(0, 50) + '...'
       })
     }
@@ -766,6 +785,10 @@ CERTIFICATIONS
       setCurrentQuestionIndex(0)
       setResponses([])
       setCurrentResponse('')
+      setVoiceTranscript('')
+      setIsPartialTranscript(false)
+      setFullConversationTranscript('')
+      setCurrentSpeaker(null)
       setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
 
       console.log('🔧 Interview started successfully with data:', {
@@ -804,6 +827,8 @@ CERTIFICATIONS
     setCurrentStage('setup')
     setVoiceTranscript('')
     setIsPartialTranscript(false)
+    setFullConversationTranscript('')
+    setCurrentSpeaker(null)
     setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
     setIsVideoEnabled(true)
     setIsAudioEnabled(true)
@@ -827,7 +852,7 @@ CERTIFICATIONS
         role: dataToUse.role,
         jobDescription: dataToUse.jobDescription,
         resume: dataToUse.resume,
-        transcript: voiceTranscript || 'Interview session ended unexpectedly',
+        transcript: fullConversationTranscript || voiceTranscript || 'Interview session ended unexpectedly',
         duration,
         status: 'incomplete'
       }
@@ -945,7 +970,7 @@ CERTIFICATIONS
             role: dataToUse.role,
             jobDescription: dataToUse.jobDescription,
             resume: dataToUse.resume,
-            transcript: voiceTranscript,
+            transcript: fullConversationTranscript || voiceTranscript,
             duration
           }),
         })
@@ -965,7 +990,7 @@ CERTIFICATIONS
               role: dataToUse.role,
               jobDescription: dataToUse.jobDescription,
               resume: dataToUse.resume,
-              transcript: voiceTranscript || 'Interview completed but evaluation failed',
+              transcript: fullConversationTranscript || voiceTranscript || 'Interview completed but evaluation failed',
               duration,
               status: 'completed'
             }),
