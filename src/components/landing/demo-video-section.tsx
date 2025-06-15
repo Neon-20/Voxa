@@ -20,7 +20,6 @@ export function DemoVideoSection() {
 
   // YouTube video configuration
   const youtubeVideoId = "g5OgHwaJ5jU" // Extracted from your YouTube URL
-  const youtubeThumbnail = `https://img.youtube.com/vi/${youtubeVideoId}/maxresdefault.jpg`
   const youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&rel=0&modestbranding=1`
 
   return (
@@ -41,40 +40,15 @@ export function DemoVideoSection() {
           <div className="max-w-3xl mx-auto mb-16">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-blue-100 to-purple-100">
               {/* Video Preview */}
-              <div className="aspect-video bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center relative overflow-hidden">
-                {/* YouTube thumbnail/preview */}
+              <div className="aspect-video flex items-center justify-center relative overflow-hidden">
+                {/* Voxa thumbnail/preview */}
                 <Image
-                  src={youtubeThumbnail}
+                  src="/voxa.png"
                   alt="Voxa Demo Video Thumbnail"
                   fill
-                  className="object-cover opacity-40"
+                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 60vw"
                 />
-
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-900/70 via-purple-900/70 to-blue-900/70" />
-
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
-
-                {/* Floating Elements */}
-                <div className="absolute top-8 left-8 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                  <div className="flex items-center gap-2 text-white text-sm">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span>Live Voice AI</span>
-                  </div>
-                </div>
-
-                <div className="absolute top-8 right-8 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                  <div className="text-white text-sm font-medium">1:40 Demo</div>
-                </div>
-
-                <div className="absolute bottom-20 left-8 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 max-w-xs">
-                  <div className="text-white text-sm">
-                    <div className="font-medium mb-1">Sample Question:</div>
-                    <div className="text-gray-300 text-xs">&quot;Tell me about your greatest weakness&quot;</div>
-                  </div>
-                </div>
 
                 {/* Play Button */}
                 <motion.button
@@ -90,29 +64,6 @@ export function DemoVideoSection() {
                   <div className="absolute inset-0 bg-white/20 rounded-full animate-ping opacity-30" />
                   <div className="absolute -inset-4 bg-white/10 rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }} />
                 </motion.button>
-
-                {/* Demo Preview Content */}
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="bg-black/50 backdrop-blur-sm rounded-lg p-4 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">Mock Interview Demo</h3>
-                        <p className="text-sm text-gray-300">Real Vapi-powered interview practice</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Volume2 className="h-4 w-4" />
-                        <span>Video: 1:40</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Corner Badge */}
-                <div className="absolute top-6 right-6">
-                  <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    Powered by Vapi
-                  </div>
-                </div>
               </div>
 
               {/* Video Controls Preview */}
