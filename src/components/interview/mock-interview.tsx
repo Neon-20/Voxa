@@ -1757,7 +1757,7 @@ Interviewer: The interview was cut short due to time limits, but thank you for y
 
                 <div className="text-center bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
                   <h4 className="font-bold text-gray-900 text-lg">Voxa AI Interviewer</h4>
-                  <p className="text-purple-600 font-medium">Powered by Vapi & AI</p>
+                  <p className="text-purple-600 font-medium">Powered by Vapi</p>
                 </div>
               </div>
 
