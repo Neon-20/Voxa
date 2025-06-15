@@ -300,6 +300,7 @@ CERTIFICATIONS
   const [isPartialTranscript, setIsPartialTranscript] = useState(false)
   const [fullConversationTranscript, setFullConversationTranscript] = useState('')
   const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'ai' | null>(null)
+  const [transcriptBackup, setTranscriptBackup] = useState('')
 
   // Video and audio control state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true)
@@ -557,6 +558,18 @@ CERTIFICATIONS
     if (!interviewStartTime) {
       setInterviewStartTime(new Date())
     }
+    setCurrentSpeaker('ai') // AI typically starts the conversation
+
+    // Add initial greeting to transcript
+    const timestamp = new Date().toLocaleTimeString()
+    setFullConversationTranscript(prev => {
+      if (prev.length === 0) { // Only add greeting if transcript is empty
+        const greeting = `[${timestamp}] AI Interviewer: Hello! Welcome to your mock interview. I'm your AI interviewer and I'm excited to help you practice. Let's begin!\n\n`
+        return greeting
+      }
+      return prev
+    })
+
     toast.success('Voxa mock interview started! The AI interviewer will ask you questions.')
   }, [interviewStartTime])
 
@@ -571,15 +584,89 @@ CERTIFICATIONS
 
   const handleSpeechStart = useCallback(() => {
     setIsSpeaking(true)
+    setCurrentSpeaker('ai') // AI is speaking
+    console.log('🎤 AI Speech started')
   }, [])
 
   const handleSpeechEnd = useCallback(() => {
     setIsSpeaking(false)
+    setCurrentSpeaker('user') // User can speak next
+    console.log('🎤 AI Speech ended, user can speak')
   }, [])
 
   const handleMessage = useCallback((message: any) => {
     console.log('Interview Vapi message:', message)
-  }, [])
+
+    // Handle different types of messages that might contain conversation data
+    if (message.type === 'conversation-update' ||
+        message.type === 'function-call' ||
+        message.type === 'assistant-request' ||
+        message.type === 'speech-update' ||
+        message.type === 'transcript' ||
+        (message.content && typeof message.content === 'string') ||
+        (message.text && typeof message.text === 'string') ||
+        (message.message && typeof message.message === 'string')) {
+
+      console.log('📞 Conversation message received:', {
+        type: message.type,
+        content: message.content || message.text || message.message,
+        role: message.role,
+        timestamp: new Date().toISOString(),
+        fullMessage: message
+      })
+
+      // If this message contains conversation content, add it to transcript
+      const content = message.content || message.text || message.message || message.transcript
+      if (content && typeof content === 'string' && content.trim().length > 10) { // Minimum length to avoid noise
+        let speaker = 'Unknown'
+
+        // Determine speaker from various possible fields
+        if (message.role === 'assistant' || message.role === 'ai' || message.role === 'bot') {
+          speaker = 'AI Interviewer'
+        } else if (message.role === 'user' || message.role === 'human' || message.role === 'candidate') {
+          speaker = 'Candidate'
+        } else if (message.user === false || message.assistant === true) {
+          speaker = 'AI Interviewer'
+        } else if (message.user === true || message.assistant === false) {
+          speaker = 'Candidate'
+        } else if (currentSpeaker === 'ai') {
+          speaker = 'AI Interviewer'
+        } else if (currentSpeaker === 'user') {
+          speaker = 'Candidate'
+        }
+
+        const timestamp = new Date().toLocaleTimeString()
+        const contentTrimmed = content.trim()
+
+        setFullConversationTranscript(prev => {
+          // Avoid duplicates by checking if similar content already exists
+          const lines = prev.split('\n')
+          const isDuplicate = lines.some(line =>
+            line.includes(contentTrimmed.substring(0, 30)) &&
+            contentTrimmed.length > 30
+          )
+
+          if (isDuplicate) {
+            console.log('📝 Duplicate content detected, skipping:', contentTrimmed.substring(0, 30) + '...')
+            return prev
+          }
+
+          const newEntry = `[${timestamp}] ${speaker}: ${contentTrimmed}\n\n`
+          console.log('📝 Adding conversation message to transcript:', {
+            speaker,
+            messageType: message.type,
+            contentLength: contentTrimmed.length,
+            preview: contentTrimmed.substring(0, 50) + '...'
+          })
+
+          const updatedTranscript = prev + newEntry
+          // Also update backup
+          setTranscriptBackup(updatedTranscript)
+          return updatedTranscript
+        })
+      }
+    }
+  }, [currentSpeaker])
 
   const handleError = useCallback(async (error: any) => {
     console.error('Interview Vapi error:', error)
@@ -626,34 +713,103 @@ CERTIFICATIONS
   }, [currentStage, interviewStartTime])
 
   const handleTranscript = useCallback((transcript: any) => {
-    if (transcript.transcript) {
+    if (transcript.transcript && transcript.transcript.trim().length > 0) {
       // Update current transcript for real-time display
       setVoiceTranscript(transcript.transcript)
       setIsPartialTranscript(transcript.transcriptType === 'partial')
 
-      // Only add to full conversation transcript when it's final
+      // Determine speaker based on multiple possible fields with better logic
+      let speaker = 'Unknown'
+
+      // Primary speaker detection logic
+      if (transcript.role === 'assistant' || transcript.role === 'ai' || transcript.role === 'bot') {
+        speaker = 'AI Interviewer'
+      } else if (transcript.role === 'user' || transcript.role === 'human' || transcript.role === 'candidate') {
+        speaker = 'Candidate'
+      } else if (transcript.user === false || transcript.assistant === true) {
+        speaker = 'AI Interviewer'
+      } else if (transcript.user === true || transcript.assistant === false) {
+        speaker = 'Candidate'
+      } else {
+        // Fallback: use current speaker context or alternate based on conversation flow
+        if (currentSpeaker === 'ai') {
+          speaker = 'AI Interviewer'
+        } else if (currentSpeaker === 'user') {
+          speaker = 'Candidate'
+        } else {
+          // Default fallback - assume alternating conversation
+          speaker = 'Candidate' // Most transcripts are user speech
+        }
+      }
+
+      const timestamp = new Date().toLocaleTimeString()
+      const transcriptText = transcript.transcript.trim()
+
+      // Add both final and partial transcripts, but with different handling
       if (transcript.transcriptType === 'final') {
-        const speaker = transcript.role === 'assistant' ? 'AI Interviewer' : 'Candidate'
-        const timestamp = new Date().toLocaleTimeString()
-
+        // Final transcripts are the authoritative version
         setFullConversationTranscript(prev => {
-          const newEntry = `[${timestamp}] ${speaker}: ${transcript.transcript}\n\n`
-          return prev + newEntry
-        })
+          // More sophisticated duplicate detection
+          const lines = prev.split('\n').filter(line => line.trim().length > 0)
+          const isDuplicate = lines.some(line => {
+            // Check if this transcript is already in the conversation
+            const lineContent = line.split(': ').slice(1).join(': ').trim()
+            return lineContent === transcriptText ||
+                   (transcriptText.length > 20 && lineContent.includes(transcriptText.substring(0, 20)))
+          })
 
-        console.log('📝 Final transcript added:', {
-          speaker,
-          text: transcript.transcript.substring(0, 50) + '...'
+          if (isDuplicate) {
+            console.log('📝 Duplicate final transcript detected, skipping:', transcriptText.substring(0, 30) + '...')
+            return prev
+          }
+
+          const newEntry = `[${timestamp}] ${speaker}: ${transcriptText}\n\n`
+          console.log('📝 Adding FINAL transcript:', {
+            speaker,
+            transcriptType: transcript.transcriptType,
+            text: transcriptText.substring(0, 50) + '...',
+            fullLength: prev.length + newEntry.length
+          })
+
+          const updatedTranscript = prev + newEntry
+          // Also update backup
+          setTranscriptBackup(updatedTranscript)
+          return updatedTranscript
         })
+      } else if (transcript.transcriptType === 'partial' && transcriptText.length > 20) {
+        // For longer partial transcripts, add them as backup in case final doesn't come
+        setTimeout(() => {
+          setFullConversationTranscript(prev => {
+            // Only add if no final version was added in the last 3 seconds
+            const recentLines = prev.split('\n').slice(-5) // Check last 5 lines
+            const hasRecentFinal = recentLines.some(line =>
+              line.includes(transcriptText.substring(0, Math.min(20, transcriptText.length)))
+            )
+
+            if (!hasRecentFinal && transcriptText.length > 20) {
+              const newEntry = `[${timestamp}] ${speaker}: ${transcriptText}\n\n`
+              console.log('📝 Adding PARTIAL transcript as backup:', {
+                speaker,
+                text: transcriptText.substring(0, 50) + '...'
+              })
+              return prev + newEntry
+            }
+            return prev
+          })
+        }, 3000) // Wait 3 seconds for final transcript
       }
 
       console.log('📝 Transcript update:', {
         type: transcript.transcriptType,
         role: transcript.role,
-        text: transcript.transcript.substring(0, 50) + '...'
+        user: transcript.user,
+        assistant: transcript.assistant,
+        speaker: speaker,
+        text: transcript.transcript.substring(0, 50) + '...',
+        length: transcript.transcript.length
       })
     }
-  }, [])
+  }, [currentSpeaker])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -789,6 +945,7 @@ CERTIFICATIONS
       setIsPartialTranscript(false)
       setFullConversationTranscript('')
       setCurrentSpeaker(null)
+      setTranscriptBackup('')
       setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
 
       console.log('🔧 Interview started successfully with data:', {
@@ -829,6 +986,7 @@ CERTIFICATIONS
     setIsPartialTranscript(false)
     setFullConversationTranscript('')
     setCurrentSpeaker(null)
+    setTranscriptBackup('')
     setTimeRemaining(10 * 60) // 10 minutes to match Vapi API limits
     setIsVideoEnabled(true)
     setIsAudioEnabled(true)
@@ -852,7 +1010,7 @@ CERTIFICATIONS
         role: dataToUse.role,
         jobDescription: dataToUse.jobDescription,
         resume: dataToUse.resume,
-        transcript: fullConversationTranscript || voiceTranscript || 'Interview session ended unexpectedly',
+        transcript: fullConversationTranscript || transcriptBackup || voiceTranscript || 'Interview session ended unexpectedly',
         duration,
         status: 'incomplete'
       }
@@ -934,7 +1092,11 @@ CERTIFICATIONS
           jobDescriptionLength: dataToUse.jobDescription?.length || 0,
           resumeLength: dataToUse.resume?.length || 0
         },
-        voiceTranscriptLength: voiceTranscript?.length || 0
+        voiceTranscriptLength: voiceTranscript?.length || 0,
+        fullConversationTranscriptLength: fullConversationTranscript?.length || 0,
+        transcriptBackupLength: transcriptBackup?.length || 0,
+        finalTranscriptToSave: (fullConversationTranscript || transcriptBackup || voiceTranscript)?.length || 0,
+        fullConversationPreview: fullConversationTranscript?.substring(0, 200) + '...'
       })
 
       if (isVapiActive()) {
@@ -970,7 +1132,7 @@ CERTIFICATIONS
             role: dataToUse.role,
             jobDescription: dataToUse.jobDescription,
             resume: dataToUse.resume,
-            transcript: fullConversationTranscript || voiceTranscript,
+            transcript: fullConversationTranscript || transcriptBackup || voiceTranscript,
             duration
           }),
         })
@@ -990,7 +1152,7 @@ CERTIFICATIONS
               role: dataToUse.role,
               jobDescription: dataToUse.jobDescription,
               resume: dataToUse.resume,
-              transcript: fullConversationTranscript || voiceTranscript || 'Interview completed but evaluation failed',
+              transcript: fullConversationTranscript || transcriptBackup || voiceTranscript || 'Interview completed but evaluation failed',
               duration,
               status: 'completed'
             }),

@@ -202,11 +202,13 @@ export const setupVapiEventHandlers = (
   vapi.on('message', onMessage)
   vapi.on('error', onError)
   
-  // Handle transcript updates - capture both partial and final transcripts
+  // Handle transcript updates - capture all transcript types and conversation messages
   vapi.on('message', (message) => {
     if (message.type === 'transcript') {
       onTranscript(message)
     }
+    // Also pass all messages to the message handler for additional conversation capture
+    onMessage(message)
   })
 }
 
