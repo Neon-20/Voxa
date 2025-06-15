@@ -56,7 +56,7 @@ export function LandingHeader() {
                 </span>
               </div>
               <span className="text-xs text-gray-500 font-medium -mt-0.5 tracking-wide">
-                Mock Interview AI
+                AI Mock Interviewer
               </span>
             </div>
           </Link>

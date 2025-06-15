@@ -22,19 +22,25 @@ export function HeroSection() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [hasShownEndMessage, setHasShownEndMessage] = useState(false)
 
   // Voice functionality handlers
   const handleCallStart = useCallback(() => {
     setIsRecording(true)
     setIsConnecting(false)
+    setHasShownEndMessage(false) // Reset the flag when starting
     toast.success('🎙️ Voice session started! Say hello to your AI career coach.')
   }, [])
 
   const handleCallEnd = useCallback(async () => {
+    // Prevent multiple calls
+    if (hasShownEndMessage) return
+
     setIsRecording(false)
     setIsVoiceActive(false)
     setIsSpeaking(false)
     setIsConnecting(false)
+    setHasShownEndMessage(true)
 
     // Optionally save the landing page voice session
     try {
@@ -56,7 +62,7 @@ export function HeroSection() {
     }
 
     toast.success('Voice session ended. Thanks for trying Voxa!')
-  }, [voiceTranscript])
+  }, [voiceTranscript, hasShownEndMessage])
 
   const handleSpeechStart = useCallback(() => {
     setIsSpeaking(true)
@@ -88,6 +94,9 @@ export function HeroSection() {
   // Setup voice event handlers
   useEffect(() => {
     if (isVoiceActive) {
+      // Clean up any existing handlers first
+      cleanupVapiEventHandlers()
+
       setupVapiEventHandlers(
         handleCallStart,
         handleCallEnd,
@@ -104,17 +113,26 @@ export function HeroSection() {
     }
   }, [isVoiceActive, handleCallStart, handleCallEnd, handleSpeechStart, handleSpeechEnd, handleMessage, handleError, handleTranscript])
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      cleanupVapiEventHandlers()
+    }
+  }, [])
+
   // Start voice session
   const startVoiceSession = async () => {
     try {
       setIsConnecting(true)
       setIsVoiceActive(true)
       setVoiceTranscript('')
+      setHasShownEndMessage(false) // Reset flag when starting new session
       await startVapiSession('careerQA')
     } catch (error) {
       toast.error('Failed to start voice session. Please try again.')
       setIsConnecting(false)
       setIsVoiceActive(false)
+      setHasShownEndMessage(false)
       console.error('Voice session error:', error)
     }
   }
@@ -123,12 +141,14 @@ export function HeroSection() {
   const stopVoiceSession = async () => {
     try {
       await stopVapiSession()
+      // Don't reset hasShownEndMessage here as handleCallEnd will be called
+    } catch (error) {
+      console.error('Failed to stop voice session:', error)
+      // Reset states if there's an error
       setIsVoiceActive(false)
       setIsRecording(false)
       setIsSpeaking(false)
       setIsConnecting(false)
-    } catch (error) {
-      console.error('Failed to stop voice session:', error)
     }
   }
 
@@ -215,25 +235,9 @@ export function HeroSection() {
           </AnimatedSection>
 
           <AnimatedSection animation="fadeInUp" delay={0.4}>
-            <p className="mb-6 text-lg leading-7 text-gray-600 sm:text-xl max-w-3xl mx-auto">
+            <p className="mb-8 text-lg leading-7 text-gray-600 sm:text-xl max-w-3xl mx-auto">
               Practice with Voxa's advanced AI interviewer. Get personalized questions, real-time feedback, and build confidence for your dream job interview.
             </p>
-
-            {/* Success metrics */}
-            <div className="flex flex-wrap justify-center gap-6 mb-8 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="font-medium">10,000+ interviews practiced</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                <span className="font-medium">95% success rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <span className="font-medium">15-minute focused sessions</span>
-              </div>
-            </div>
           </AnimatedSection>
 
           {/* CTA Buttons */}
@@ -267,17 +271,6 @@ export function HeroSection() {
                 <buttonContent.icon className={`mr-2 h-5 w-5 ${buttonContent.className}`} />
                 {voiceState === 'idle' ? 'Try Voice Demo' : buttonContent.text}
               </AnimatedButton>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-500 mb-2">Trusted by professionals at</p>
-              <div className="flex justify-center items-center gap-8 opacity-60">
-                <div className="text-lg font-bold text-gray-400">Google</div>
-                <div className="text-lg font-bold text-gray-400">Microsoft</div>
-                <div className="text-lg font-bold text-gray-400">Amazon</div>
-                <div className="text-lg font-bold text-gray-400">Meta</div>
-              </div>
             </div>
 
             {/* Voice Status Indicator */}
