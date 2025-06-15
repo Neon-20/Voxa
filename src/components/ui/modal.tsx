@@ -68,7 +68,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'lg', footer }:
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-gradient-to-b from-white/95 via-pink-50/90 to-purple-100/85 backdrop-blur-md"
+            className="absolute inset-0 bg-gradient-to-b from-white/95 via-pink-200/90 to-purple-300/85 backdrop-blur-md"
             style={{
               position: 'absolute',
               top: 0,
