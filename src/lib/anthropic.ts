@@ -7,6 +7,51 @@ const anthropic = new Anthropic({
 
 export { anthropic }
 
+// Utility function for retrying API calls with exponential backoff
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> => {
+  let lastError: Error
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error as Error
+
+      // Don't retry for certain error types
+      if (error instanceof Error) {
+        if (error.message.includes('API key') ||
+            error.message.includes('quota') ||
+            error.message.includes('Invalid JSON')) {
+          throw error
+        }
+      }
+
+      // Only retry for overloaded/rate limit errors
+      if (error instanceof Error &&
+          (error.message.includes('overloaded') ||
+           error.message.includes('rate limit') ||
+           error.message.includes('529'))) {
+
+        if (attempt < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, attempt) // Exponential backoff
+          console.log(`Retrying Anthropic API call in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+      }
+
+      // If it's not a retryable error or we've exhausted retries, throw
+      throw error
+    }
+  }
+
+  throw lastError!
+}
+
 // Helper functions for different AI tasks
 export const generateInterviewQuestions = async (role: string) => {
   try {
@@ -42,6 +87,8 @@ export const generateInterviewQuestions = async (role: string) => {
         throw new Error('Anthropic API quota exceeded')
       } else if (error.message.includes('rate limit')) {
         throw new Error('Anthropic API rate limit exceeded')
+      } else if (error.message.includes('overloaded') || error.message.includes('529')) {
+        throw new Error('Anthropic API is currently overloaded. Please try again in a few moments.')
       }
     }
 
@@ -54,7 +101,7 @@ export const generatePersonalizedInterviewQuestions = async (
   resume: string,
   role: string
 ) => {
-  try {
+  return retryWithBackoff(async () => {
     console.log('Calling Anthropic API for personalized questions...')
 
     const response = await anthropic.messages.create({
@@ -99,7 +146,7 @@ Generate personalized interview questions based on this specific job and candida
     console.log('Anthropic API call successful, response length:', result?.length)
 
     return result
-  } catch (error) {
+  }).catch(error => {
     console.error('Anthropic API error:', error)
 
     if (error instanceof Error) {
@@ -109,11 +156,13 @@ Generate personalized interview questions based on this specific job and candida
         throw new Error('Anthropic API quota exceeded')
       } else if (error.message.includes('rate limit')) {
         throw new Error('Anthropic API rate limit exceeded')
+      } else if (error.message.includes('overloaded') || error.message.includes('529')) {
+        throw new Error('Anthropic API is currently overloaded. Please try again in a few moments.')
       }
     }
 
     throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
+  })
 }
 
 export const evaluateInterviewResponse = async (question: string, response: string, role: string) => {
@@ -144,6 +193,19 @@ export const evaluateInterviewResponse = async (question: string, response: stri
     return anthropicResponse.content[0].type === 'text' ? anthropicResponse.content[0].text : ''
   } catch (error) {
     console.error('Anthropic API error:', error)
+
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        throw new Error('Invalid Anthropic API key')
+      } else if (error.message.includes('quota')) {
+        throw new Error('Anthropic API quota exceeded')
+      } else if (error.message.includes('rate limit')) {
+        throw new Error('Anthropic API rate limit exceeded')
+      } else if (error.message.includes('overloaded') || error.message.includes('529')) {
+        throw new Error('Anthropic API is currently overloaded. Please try again in a few moments.')
+      }
+    }
+
     throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -212,6 +274,19 @@ IMPORTANT: Return ONLY valid JSON, no additional text or formatting.`
     return anthropicResponse.content[0].type === 'text' ? anthropicResponse.content[0].text : ''
   } catch (error) {
     console.error('Anthropic API error:', error)
+
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        throw new Error('Invalid Anthropic API key')
+      } else if (error.message.includes('quota')) {
+        throw new Error('Anthropic API quota exceeded')
+      } else if (error.message.includes('rate limit')) {
+        throw new Error('Anthropic API rate limit exceeded')
+      } else if (error.message.includes('overloaded') || error.message.includes('529')) {
+        throw new Error('Anthropic API is currently overloaded. Please try again in a few moments.')
+      }
+    }
+
     throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
