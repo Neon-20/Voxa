@@ -27,9 +27,30 @@ export const useAuth = () => {
 export function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isGuest, setIsGuest] = useState(false)
   const supabase = createSupabaseClient()
 
   useEffect(() => {
+    // Check for guest mode first
+    const checkGuestMode = () => {
+      if (typeof window !== 'undefined') {
+        const guestMode = localStorage.getItem('voxa_guest_mode')
+        console.log('Checking guest mode:', guestMode)
+        if (guestMode === 'true') {
+          console.log('Guest mode detected, setting isGuest to true')
+          setIsGuest(true)
+          setLoading(false)
+          return true
+        }
+      }
+      return false
+    }
+
+    // If in guest mode, skip Supabase auth
+    if (checkGuestMode()) {
+      return
+    }
+
     // Get initial session
     const getSession = async () => {
       try {
@@ -83,11 +104,42 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase.auth])
 
+  // Listen for guest mode changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const guestMode = localStorage.getItem('voxa_guest_mode')
+      console.log('Storage change detected, guest mode:', guestMode)
+      if (guestMode === 'true' && !isGuest) {
+        console.log('Setting guest mode to true')
+        setIsGuest(true)
+        setUser(null)
+        setLoading(false)
+      } else if (guestMode !== 'true' && isGuest) {
+        console.log('Setting guest mode to false')
+        setIsGuest(false)
+      }
+    }
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [isGuest])
+
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      // Clear user state immediately
-      setUser(null)
+      if (isGuest) {
+        // Clear guest mode
+        localStorage.removeItem('voxa_guest_mode')
+        document.cookie = 'voxa_guest_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        setIsGuest(false)
+      } else {
+        await supabase.auth.signOut()
+        // Clear user state immediately
+        setUser(null)
+      }
     } catch (error) {
       console.error('Sign out error:', error)
       throw error
@@ -97,6 +149,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     loading,
+    isGuest,
     signOut,
   }
 

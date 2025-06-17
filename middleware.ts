@@ -66,8 +66,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(destination, request.url))
   }
 
-  // Redirect unauthenticated users from protected pages to auth
-  if (!session && isProtectedPage) {
+  // Check for guest mode
+  const isGuestMode = request.cookies.get('voxa_guest_mode')?.value === 'true'
+
+  // Redirect unauthenticated users from protected pages to auth (unless in guest mode)
+  if (!session && !isGuestMode && isProtectedPage) {
     const redirectUrl = new URL('/auth', request.url)
     redirectUrl.searchParams.set('redirectTo', pathname)
     console.log('Middleware: Redirecting unauthenticated user to auth with redirectTo:', pathname)

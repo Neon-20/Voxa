@@ -24,7 +24,7 @@ export default function InterviewPage() {
         </div>
       </div>
     }>
-      <RouteGuard requireAuth={true}>
+      <RouteGuard requireAuth={false}>
         <InterviewLayout>
         <div className="space-y-12">
         {/* Compact Hero Section */}

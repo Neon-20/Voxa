@@ -13,7 +13,7 @@ interface InterviewLayoutProps {
 }
 
 export function InterviewLayout({ children }: InterviewLayoutProps) {
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, isGuest, signOut } = useAuth()
   const router = useRouter()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -35,7 +35,11 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
   const handleSignOut = async () => {
     try {
       await signOut()
-      toast.success('Signed out successfully')
+      if (isGuest) {
+        toast.success('Guest session ended')
+      } else {
+        toast.success('Signed out successfully')
+      }
       router.push('/')
     } catch (error) {
       toast.error('Failed to sign out')
@@ -44,9 +48,8 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
 
 
 
-  // Middleware handles authentication redirects, so if we reach here, user should be authenticated
   // Show loading state if auth is still loading
-  if (!user && loading) {
+  if (!user && !isGuest && loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <div className="text-center">
@@ -60,8 +63,8 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
     )
   }
 
-  // If no user and not loading, middleware should have redirected, but show auth form as fallback
-  if (!user) {
+  // If no user and not guest and not loading, show auth form as fallback
+  if (!user && !isGuest) {
     return <AuthForm />
   }
 
@@ -124,14 +127,23 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm ${
+                    isGuest
+                      ? 'bg-gradient-to-r from-gray-500 to-gray-600'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  }`}>
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden sm:block text-left">
                     <div className="text-sm font-medium text-gray-900">
-                      {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                      {isGuest
+                        ? 'Guest User'
+                        : (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
+                      }
                     </div>
-                    <div className="text-xs text-gray-500">Ready to practice</div>
+                    <div className="text-xs text-gray-500">
+                      {isGuest ? 'Guest Mode' : 'Ready to practice'}
+                    </div>
                   </div>
                   <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -142,15 +154,22 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
                     {/* User Info Section */}
                     <div className="px-4 py-3 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isGuest
+                            ? 'bg-gradient-to-r from-gray-500 to-gray-600'
+                            : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                        }`}>
                           <User className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900 truncate">
-                            {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                            {isGuest
+                              ? 'Guest User'
+                              : (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
+                            }
                           </div>
                           <div className="text-xs text-gray-500 truncate">
-                            {user.email}
+                            {isGuest ? 'Guest Mode - No data saved' : user?.email}
                           </div>
                         </div>
                       </div>
@@ -163,7 +182,7 @@ export function InterviewLayout({ children }: InterviewLayoutProps) {
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
                       >
                         <LogOut className="h-4 w-4" />
-                        Sign Out
+                        {isGuest ? 'End Guest Session' : 'Sign Out'}
                       </button>
                     </div>
                   </div>

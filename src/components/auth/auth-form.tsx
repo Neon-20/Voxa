@@ -129,6 +129,22 @@ export function AuthForm() {
     }
   }
 
+  const handleGuestAccess = () => {
+    // Set guest mode in localStorage
+    localStorage.setItem('voxa_guest_mode', 'true')
+
+    // Also set a cookie for middleware to detect
+    document.cookie = 'voxa_guest_mode=true; path=/; max-age=86400' // 24 hours
+
+    // Get redirect destination
+    const redirectDestination = getRedirectDestination()
+
+    toast.success('Welcome! You\'re now using Voxa as a guest.')
+
+    // Redirect to the intended destination
+    window.location.href = redirectDestination
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -304,6 +320,35 @@ export function AuthForm() {
             </button>
           </div>
         </form>
+
+        {/* Guest Access Option */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">Or try without signing up</span>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleGuestAccess}
+              disabled={isLoading || socialLoading !== null}
+              className="group relative w-full flex justify-center items-center py-3 px-4 border-2 border-dashed border-gray-300 text-sm font-medium rounded-lg text-gray-600 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <svg className="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Continue as Guest
+            </button>
+            <p className="mt-2 text-xs text-center text-gray-500">
+              Try Voxa without creating an account. Your interview history won&apos;t be saved.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

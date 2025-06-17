@@ -6,6 +6,7 @@ import { ResumeUpload } from '@/components/ui/resume-upload'
 import { TranscriptModal } from '@/components/interview/transcript-modal'
 import { FeedbackModal } from '@/components/interview/feedback-modal'
 import { toast } from 'react-hot-toast'
+import { useAuth } from '@/components/providers'
 import {
   startVapiSession,
   stopVapiSession,
@@ -181,6 +182,22 @@ interface InterviewData {
 type InterviewStage = 'setup' | 'interview' | 'completed'
 
 export function MockInterview() {
+  // Auth context
+  const { isGuest } = useAuth()
+
+  // Helper function to get API headers with guest mode support
+  const getApiHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (isGuest) {
+      headers['x-guest-mode'] = 'true'
+    }
+
+    return headers
+  }
+
   // Interview stage management
   const [currentStage, setCurrentStage] = useState<InterviewStage>('setup')
   const [interviewData, setInterviewData] = useState<InterviewData>({
@@ -827,7 +844,9 @@ CERTIFICATIONS
 
   const fetchInterviewSessions = async () => {
     try {
-      const response = await fetch('/api/interview/sessions')
+      const response = await fetch('/api/interview/sessions', {
+        headers: getApiHeaders()
+      })
       if (response.ok) {
         const data = await response.json()
         setInterviewSessions(data)
@@ -899,9 +918,7 @@ CERTIFICATIONS
       // Generate personalized questions based on JD and resume
       const response = await fetch('/api/interview/personalized-questions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           jobDescription: interviewData.jobDescription,
           resume: interviewData.resume,
@@ -1024,9 +1041,7 @@ CERTIFICATIONS
 
       const response = await fetch('/api/interview/save-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify(sessionData),
       })
 
@@ -1125,9 +1140,7 @@ CERTIFICATIONS
         // For normal completion, use the evaluation endpoint
         const response = await fetch('/api/interview/evaluate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getApiHeaders(),
           body: JSON.stringify({
             role: dataToUse.role,
             jobDescription: dataToUse.jobDescription,
@@ -1145,9 +1158,7 @@ CERTIFICATIONS
           // If evaluation fails, save as incomplete session
           await fetch('/api/interview/save-session', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: getApiHeaders(),
             body: JSON.stringify({
               role: dataToUse.role,
               jobDescription: dataToUse.jobDescription,
